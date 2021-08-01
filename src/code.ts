@@ -101,6 +101,41 @@ function main() {
   figma.closePlugin();
 }
 
+function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: string, xOffset: number, yOffset: number) {
+  const backClone = back.clone();
+  backClone.x = 0;
+  backClone.y = 0;
+  backClone.locked = true;
+
+  const clone = child.clone();
+  clone.x = 0;
+  clone.y = 0;
+  clone.locked = true;
+
+  const widget = figma.createFrame();
+  // game.appendChild(widget);
+  widget.name = name;
+  widget.fills = [];
+  widget.clipsContent = false;
+  widget.appendChild(clone);
+  widget.appendChild(backClone);
+  widget.resize(clone.width, clone.height);
+  widget.x = xOffset;
+  widget.y = yOffset;
+
+  const spacer = figma.createRectangle();
+  // game.appendChild(spacer);
+  spacer.name = "----";
+  spacer.resize(clone.width, 1);
+  spacer.x = widget.x;
+  spacer.y = widget.y + widget.height;
+  spacer.fills = [];
+  
+  const item = figma.group([widget, spacer], game);
+  item.name = name;
+  return item;
+}
+
 function swap(arr: any[], i: number, j: number) {
   const tmp = arr[i];
   arr[i] = arr[j];
@@ -267,6 +302,92 @@ function setupCatan(board: FrameNode) {
   figma.closePlugin();
 }
 
+function setupMahjong(board: FrameNode) {
+  const MARGIN = 300;
+  const TILES_PER_ROW = 28;
+  const tiles: GroupNode[] = [];
+  for (const page of figma.root.children) {
+    if (page.name === "Assets") {
+      let xOffset = MARGIN;
+      for (const frame of page.children) {
+        if (frame.type !== "FRAME") continue;
+        // itemIdx++;
+        let back: SceneNode | null = null;
+        let yOffset = MARGIN;
+        let tileNum = 1;
+        let rotation = 0;
+        let rowHeight = MARGIN;
+        for (const child of frame.children) {
+          if (back === null) {
+            back = child;
+          } else if (child.type === "COMPONENT") {
+            continue;
+          } else {
+            const item = createCard(
+              back,
+              child,
+              board, // used to be game
+              frame.name,
+              xOffset,
+              yOffset
+            );
+            board.appendChild(item);
+            // item.setPluginData("gameId", game.id);
+            // item.setPluginData("class", `item-${itemIdx}`)
+            tiles.push(item);
+            item.rotation = rotation;
+            item.setRelaunchData({
+              shuffle_in_place: '',
+              gather: '',
+              flip: '',
+              tidy: '',
+              tidy_show: '',
+              show: 'Only you see the hidden info',
+              count: `Count ${frame.name}s`
+            })
+            if (tileNum % 2 === 0) {
+              if (rotation != 0) { // rotated
+                yOffset += back.width;
+              } else {
+                xOffset += back.width;
+                yOffset = rowHeight;
+              }
+            } else {
+              yOffset--;
+            }
+            if (tileNum % TILES_PER_ROW === 0){ // end of row, reset
+              switch (tileNum / TILES_PER_ROW) {
+                case 2: // about to start bottom row
+                  rowHeight = yOffset;
+                  xOffset = MARGIN;
+                  break;
+                case 3: // about to start right row
+                  rowHeight = 800+MARGIN;
+                  break;
+                default:
+                  xOffset = MARGIN;
+                  rowHeight += 800;
+              }
+              yOffset = rowHeight;
+              if (rotation === 90) {
+                rotation = 0;
+              } else {
+                rotation = 90;
+              }
+            }
+            tileNum++;
+          }
+        }
+        if (back) {
+          xOffset += MARGIN + back.width;
+        }
+        figma.currentPage.selection = tiles;
+        shuffleInPlace();
+      }
+    }
+  }
+}
+
 function turnFaceDown(node: SceneNode) {
   if (node.type === "GROUP") {
     if (node.children.length > 0 && node.children[0].type === "FRAME") {
@@ -302,6 +423,27 @@ function shuffle() {
   figma.closePlugin();
 }
 
+function shuffleInPlace() {
+  const toShuffle = figma.currentPage.selection;
+  if (toShuffle.length === 0) return;
+  for (let i = 0; i < toShuffle.length; i++) {
+    const idx = Math.floor(Math.random() * (toShuffle.length - i)) + i;
+    const tmpX = toShuffle[idx].x;
+    const tmpY = toShuffle[idx].y;
+    const tmpRotation = toShuffle[idx].rotation;
+
+    toShuffle[idx].x = toShuffle[i].x;
+    toShuffle[idx].y = toShuffle[i].y;
+    toShuffle[idx].rotation = toShuffle[i].rotation;
+    
+    toShuffle[i].x = tmpX;
+    toShuffle[i].y = tmpY;
+    toShuffle[i].rotation = tmpRotation;
+  }
+  figma.notify("Finished shuffling in place");
+  figma.closePlugin();
+}
+
 function gather() {
   const toGather = [...figma.currentPage.selection];
   if (toGather.length === 0) {
@@ -334,6 +476,7 @@ function gather() {
       item.x = xPos;
       item.y = yPos;
       xPos += item.width + 2;
+      item.rotation = 0;
       assetNode.appendChild(item);
     }
     return;
@@ -438,6 +581,9 @@ const selection = figma.currentPage.selection;
 if (selection.length === 1 && (selection[0].name === "Catan Game Board" || figma.command === "reset_catan") && selection[0].type === "FRAME") {
   selection[0].setRelaunchData({ reset_catan: "" });
   setupCatan(selection[0]);
+} else if (selection.length === 1 && (selection[0].name === "Mahjong Game Board" || figma.command === "reset_mahjong") && selection[0].type === "FRAME") {
+  selection[0].setRelaunchData({ reset_mahjong: "" });
+  setupMahjong(selection[0]);
 } else if (figma.command && figma.command !== "" && figma.command !== "reset") {
   const selection = figma.currentPage.selection;
   if (figma.root.getPluginData("url") !== "" ||
@@ -445,6 +591,7 @@ if (selection.length === 1 && (selection[0].name === "Catan Game Board" || figma
     figma.showUI(__html__, { width: 400, height: 400 });
     figma.ui.postMessage({ type: "warn" });
   } else if (figma.command === "shuffle") shuffle();
+  else if (figma.command === "shuffle_in_place") shuffleInPlace();
   else if (figma.command === "flip") flip();
   else if (figma.command === "gather" || figma.command === "tidy") {
     gather();
@@ -453,6 +600,10 @@ if (selection.length === 1 && (selection[0].name === "Catan Game Board" || figma
   else if (figma.command === "count") {
     figma.notify(`${figma.currentPage.selection.length} selected`);
     figma.closePlugin();
+  }
+  else if (figma.command === "tidy_show") {
+    gather();
+    show();
   }
 } else main();
 

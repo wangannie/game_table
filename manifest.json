@@ -6,12 +6,15 @@
   "ui": "dist/ui.html",
   "relaunchButtons": [
     {"command": "shuffle", "name": "Shuffle", "multipleSelection": true},
+    {"command": "shuffle_in_place", "name": "Shuffle In Place", "multipleSelection": true},
     {"command": "flip", "name": "Flip Over", "multipleSelection": true},
     {"command": "tidy", "name": "Tidy Up", "multipleSelection": true},
+    {"command": "tidy_show", "name": "Tidy Up & Look Privately", "multipleSelection": true},
     {"command": "gather", "name": "Gather"},
     {"command": "show", "name": "Look Privately", "multipleSelection": true},
     {"command": "count", "name": "Count Selection", "multipleSelection": true},
     {"command": "reset", "name": "Reset Game"},
-    {"command": "reset_catan", "name": "Randomize Board"}
+    {"command": "reset_catan", "name": "Randomize Board"},
+    {"command": "reset_mahjong", "name": "Reset Mahjong"}
   ]
 }
