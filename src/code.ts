@@ -110,7 +110,7 @@ function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: s
   const item = figma.group([widget, spacer], game);
   item.setPluginData("gameId", game.id);
   item.setPluginData("class", `item-${itemIdx}`)
-  item.name = name;
+  item.name = child.name;
   return item;
 }
 
@@ -282,20 +282,22 @@ function setupCatan(board: FrameNode) {
 
 function setupMahjong(board: FrameNode) {
   let itemIdx = 0;
-  const MARGIN = 300;
-  const TILES_PER_ROW = 28;
+  const MARGIN_Y = 1500;
+  const MARGIN_X = 1500 + 675;
+
+  const TILES_PER_ROW = 28; // 36 incl. all tiles, 28 for just 3 suits 
   const tiles: GroupNode[] = [];
   for (const page of figma.root.children) {
     if (page.name === "Assets") {
-      let xOffset = MARGIN;
+      let xOffset = MARGIN_X;
+      let yOffset = MARGIN_Y;
+      let rowHeight = MARGIN_Y;
+      let tileNum = 1;
+      let rotation = 0;
       for (const frame of page.children) {
         if (frame.type !== "FRAME") continue;
         itemIdx++;
         let back: SceneNode | null = null;
-        let yOffset = MARGIN;
-        let tileNum = 1;
-        let rotation = 0;
-        let rowHeight = MARGIN;
         for (const child of frame.children) {
           if (back === null) {
             back = child;
@@ -306,7 +308,7 @@ function setupMahjong(board: FrameNode) {
               back,
               child,
               board,
-              frame.name,
+              child.name,
               xOffset,
               yOffset,
               itemIdx,
@@ -334,16 +336,21 @@ function setupMahjong(board: FrameNode) {
               yOffset--;
             }
             if (tileNum % TILES_PER_ROW === 0){ // end of row, reset
-              switch (tileNum / TILES_PER_ROW) {
+              switch (tileNum / TILES_PER_ROW){
+                case 1:
+                  xOffset = MARGIN_X - back.height - back.width;
+                  rowHeight = MARGIN_Y + back.height + 2 * back.width;
+                  break;
                 case 2: // about to start bottom row
                   rowHeight = yOffset;
-                  xOffset = MARGIN;
+                  xOffset = MARGIN_X;
                   break;
                 case 3: // about to start right row
-                  rowHeight = 800+MARGIN;
+                  xOffset += back.width;
+                  rowHeight = MARGIN_Y + back.height + 2 * back.width;
                   break;
                 default:
-                  xOffset = MARGIN;
+                  xOffset = MARGIN_X;
                   rowHeight += 800;
               }
               yOffset = rowHeight;
@@ -355,9 +362,6 @@ function setupMahjong(board: FrameNode) {
             }
             tileNum++;
           }
-        }
-        if (back) {
-          xOffset += MARGIN + back.width;
         }
         figma.currentPage.selection = tiles;
         shuffleInPlace();
