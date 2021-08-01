@@ -45,39 +45,15 @@ function main() {
           } else if (child.type === "COMPONENT") {
             continue;
           } else {
-            const backClone = back.clone();
-            backClone.x = 0;
-            backClone.y = 0;
-            backClone.locked = true;
-
-            const clone = child.clone();
-            clone.x = 0;
-            clone.y = 0;
-            clone.locked = true;
-
-            const widget = figma.createFrame();
-            game.appendChild(widget);
-            widget.name = frame.name;
-            widget.fills = [];
-            widget.clipsContent = false;
-            widget.appendChild(clone);
-            widget.appendChild(backClone);
-            widget.resize(clone.width, clone.height);
-            widget.x = xOffset;
-            widget.y = yOffset;
-
-            const spacer = figma.createRectangle();
-            game.appendChild(spacer);
-            spacer.name = "----";
-            spacer.resize(clone.width, 1);
-            spacer.x = widget.x;
-            spacer.y = widget.y + widget.height;
-            spacer.fills = [];
-
-            const item = figma.group([widget, spacer], game);
-            item.name = frame.name;
-            item.setPluginData("gameId", game.id);
-            item.setPluginData("class", `item-${itemIdx}`)
+            const item = createCard(
+              back,
+              child,
+              game,
+              frame.name,
+              xOffset,
+              yOffset,
+              itemIdx
+            );
             item.setRelaunchData({
               shuffle: '',
               gather: '',
@@ -101,7 +77,7 @@ function main() {
   figma.closePlugin();
 }
 
-function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: string, xOffset: number, yOffset: number) {
+function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: string, xOffset: number, yOffset: number, itemIdx:number) {
   const backClone = back.clone();
   backClone.x = 0;
   backClone.y = 0;
@@ -113,7 +89,7 @@ function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: s
   clone.locked = true;
 
   const widget = figma.createFrame();
-  // game.appendChild(widget);
+  game.appendChild(widget);
   widget.name = name;
   widget.fills = [];
   widget.clipsContent = false;
@@ -124,7 +100,7 @@ function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: s
   widget.y = yOffset;
 
   const spacer = figma.createRectangle();
-  // game.appendChild(spacer);
+  game.appendChild(spacer);
   spacer.name = "----";
   spacer.resize(clone.width, 1);
   spacer.x = widget.x;
@@ -132,6 +108,8 @@ function createCard (back: SceneNode, child: SceneNode, game: FrameNode, name: s
   spacer.fills = [];
   
   const item = figma.group([widget, spacer], game);
+  item.setPluginData("gameId", game.id);
+  item.setPluginData("class", `item-${itemIdx}`)
   item.name = name;
   return item;
 }
@@ -303,6 +281,7 @@ function setupCatan(board: FrameNode) {
 }
 
 function setupMahjong(board: FrameNode) {
+  let itemIdx = 0;
   const MARGIN = 300;
   const TILES_PER_ROW = 28;
   const tiles: GroupNode[] = [];
@@ -311,7 +290,7 @@ function setupMahjong(board: FrameNode) {
       let xOffset = MARGIN;
       for (const frame of page.children) {
         if (frame.type !== "FRAME") continue;
-        // itemIdx++;
+        itemIdx++;
         let back: SceneNode | null = null;
         let yOffset = MARGIN;
         let tileNum = 1;
@@ -326,14 +305,13 @@ function setupMahjong(board: FrameNode) {
             const item = createCard(
               back,
               child,
-              board, // used to be game
+              board,
               frame.name,
               xOffset,
-              yOffset
+              yOffset,
+              itemIdx,
             );
             board.appendChild(item);
-            // item.setPluginData("gameId", game.id);
-            // item.setPluginData("class", `item-${itemIdx}`)
             tiles.push(item);
             item.rotation = rotation;
             item.setRelaunchData({
